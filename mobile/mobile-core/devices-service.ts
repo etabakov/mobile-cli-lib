@@ -344,9 +344,20 @@ export class DevicesService extends EventEmitter implements Mobile.IDevicesServi
 	}
 
 	@exported("devicesService")
-	public deployOnDevices(deviceIdentifiers: string[], packageFile: string, packageName: string): Promise<void>[] {
+	public deployOnDevices(deviceIdentifiers: string[], packageFile: string, packageName: string | Mobile.IProjectIdentifier): Promise<void>[] {
 		this.$logger.trace(`Called deployOnDevices for identifiers ${deviceIdentifiers} for packageFile: ${packageFile}. packageName is ${packageName}.`);
-		return _.map(deviceIdentifiers, deviceIdentifier => this.deployOnDevice(deviceIdentifier, packageFile, packageName));
+		return _.map(deviceIdentifiers, async deviceIdentifier => {
+			const device = this.getDeviceByIdentifier(deviceIdentifier);
+
+			let identifier: string;
+			if (typeof packageName === "string") {
+				identifier = packageName;
+			} else {
+				identifier = packageName[device.deviceInfo.platform.toLowerCase()];
+			}
+
+			return this.deployOnDevice(device, packageFile, identifier);
+		});
 	}
 
 	/**
@@ -574,8 +585,7 @@ export class DevicesService extends EventEmitter implements Mobile.IDevicesServi
 		return await device.applicationManager.getDebuggableApps();
 	}
 
-	private async deployOnDevice(deviceIdentifier: string, packageFile: string, packageName: string): Promise<void> {
-		const device = this.getDeviceByIdentifier(deviceIdentifier);
+	private async deployOnDevice(device: Mobile.IDevice, packageFile: string, packageName: string): Promise<void> {
 		await device.applicationManager.reinstallApplication(packageName, packageFile);
 		this.$logger.info(`Successfully deployed on device with identifier '${device.deviceInfo.identifier}'.`);
 		await device.applicationManager.tryStartApplication(packageName);
