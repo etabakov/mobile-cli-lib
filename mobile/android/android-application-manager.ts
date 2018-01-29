@@ -76,9 +76,11 @@ export class AndroidApplicationManager extends ApplicationManagerBase {
 			const processIdentifier = await this.$androidProcessService.getAppProcessId(deviceIdentifier, appIdentifier);
 			if (processIdentifier) {
 				this.$deviceLogProvider.setApplicationPidForDevice(deviceIdentifier, processIdentifier);
+				await this.$logcatHelper.start(this.identifier);
+			} else {
+				await this.$logcatHelper.dump(this.identifier);
+				throw new Error("Can't find process id.");
 			}
-
-			await this.$logcatHelper.start(this.identifier);
 		}
 	}
 
